@@ -4,7 +4,7 @@ import { isChannelMember } from "@/lib/telegram-auth";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const CHANNEL_LINK = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK!;
 // Yahan apne PDF ka direct link daaliye (kisi server ya AWS/Vercel blob par host kiya hua)
-const PDF_FILE_URL = "https://aapki-website.com/path-to-your-ebook.pdf"; 
+const PDF_FILE_URL = "https://drive.google.com/file/d/1vFy4dmbDm1a-CcOlzDieeUu5cIEjzuTV/view?usp=drive_link"; 
 
 export async function POST(req: NextRequest) {
   try {
