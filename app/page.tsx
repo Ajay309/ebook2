@@ -13,7 +13,6 @@ const POLL_TIMEOUT_MS = 2 * 60 * 1000; // give up after 2 minutes
 export default function EbookLandingPage() {
   const [joinedClicked, setJoinedClicked] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -23,12 +22,16 @@ export default function EbookLandingPage() {
   }, []);
 
   function startVerification() {
+    // FIX 1: Naya polling shuru karne se pehle purana interval zarur clear karein
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
     const token = crypto.randomUUID();
-    setSessionToken(token);
     setStatus("waiting");
 
-    // Opens the bot chat directly — on mobile this jumps straight into the
-    // Telegram app; the user only has to tap "Start", nothing else.
+    // Opens the bot chat directly
     window.open(`https://t.me/${BOT_USERNAME}?start=${token}`, "_blank");
 
     const startedAt = Date.now();
@@ -66,7 +69,8 @@ export default function EbookLandingPage() {
           Get your copy of the ebook
         </h1>
         <p className="text-[#9198a1] mb-8 leading-relaxed">
-          Join the Telegram channel first — once you're in, verify with the
+          {/* FIX 2: Next.js mein single quote ko escape karna zaroori hota hai */}
+          Join the Telegram channel first — once you&apos;re in, verify with the
           bot and the download unlocks instantly.
         </p>
 
