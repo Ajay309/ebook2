@@ -3,8 +3,9 @@ import { isChannelMember } from "@/lib/telegram-auth";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const CHANNEL_LINK = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK!;
-// Yahan apne PDF ka direct link daaliye (kisi server ya AWS/Vercel blob par host kiya hua)
-const PDF_FILE_URL = "https://drive.google.com/file/d/1vFy4dmbDm1a-CcOlzDieeUu5cIEjzuTV/view?usp=drive_link"; 
+
+// FIX 1: Google Drive link ko 'view' se hatakar 'direct download' (uc?export=download) me convert kiya
+const PDF_FILE_URL = "https://drive.google.com/uc?export=download&id=1vFy4dmbDm1a-CcOlzDieeUu5cIEjzuTV"; 
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,6 @@ export async function POST(req: NextRequest) {
     if (update.message?.text?.startsWith("/start")) {
       const chatId = update.message.chat.id;
       
-      // Bot bolega channel join karo
       await sendMessage(chatId, "Welcome! To get the free ebook, please join our channel first.", {
         inline_keyboard: [
           [{ text: "1. Join Channel 📢", url: CHANNEL_LINK }],
@@ -29,17 +29,26 @@ export async function POST(req: NextRequest) {
       const callbackQuery = update.callback_query;
       const chatId = callbackQuery.message.chat.id;
       const userId = callbackQuery.from.id;
+      const callbackQueryId = callbackQuery.id;
+
+      // FIX 2: Telegram ko batao ki button click ho gaya hai (taki button ghumna/load hona band ho)
+      await answerCallbackQuery(callbackQueryId);
 
       if (callbackQuery.data === "check_membership") {
-        const isMember = await isChannelMember(userId);
+        try {
+          const isMember = await isChannelMember(userId);
 
-        if (isMember) {
-          // Join kar liya hai toh PDF bhej do
-          await sendMessage(chatId, "Thank you for joining! Here is your Ebook 👇");
-          await sendDocument(chatId, PDF_FILE_URL);
-        } else {
-          // Join nahi kiya toh wapas warning do
-          await sendMessage(chatId, "Aapne abhi tak channel join nahi kiya hai. Pehle join karein, fir verify dabayein!");
+          if (isMember) {
+            // Join kar liya hai toh PDF bhej do
+            await sendMessage(chatId, "Thank you for joining! Here is your Ebook 👇");
+            await sendDocument(chatId, PDF_FILE_URL);
+          } else {
+            // Join nahi kiya toh wapas warning do
+            await sendMessage(chatId, "Aapne abhi tak channel join nahi kiya hai. Pehle join karein, fir verify dabayein!");
+          }
+        } catch (err) {
+          console.error("Membership Check Error:", err);
+          await sendMessage(chatId, "Verification me error aaya. Kya aapne Bot ko Channel ka Admin banaya hai?");
         }
       }
       return NextResponse.json({ ok: true });
@@ -66,5 +75,14 @@ async function sendDocument(chatId: number, documentUrl: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, document: documentUrl }),
+  });
+}
+
+// Button ki loading rokne ka function
+async function answerCallbackQuery(callbackQueryId: string) {
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQueryId }),
   });
 }
